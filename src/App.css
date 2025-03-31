@@ -267,7 +267,7 @@ button:hover::after {
 
   #captionResult {
     background: rgba(0, 0, 0, 0.15);
-    padding: 25px;
+    padding: 9px;
     border-radius: 15px;
     margin: 30px 0;
     font-size: 0.8em;
