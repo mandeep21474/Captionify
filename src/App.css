@@ -267,7 +267,7 @@ button:hover::after {
 
   #captionResult {
     background: rgba(0, 0, 0, 0.15);
-    padding: 9px;
+    padding: 20px;
     border-radius: 15px;
     margin: 30px 0;
     font-size: 0.8em;
@@ -276,6 +276,7 @@ button:hover::after {
     transform: translateY(10px);
     animation: textAppear 0.6s forwards;
     border: 1px solid rgba(255, 255, 255, 0.1);
+    overflow-x: auto;
   }
 
   @keyframes textAppear {
