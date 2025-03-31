@@ -120,7 +120,7 @@ function App() {
       // Generate formatted caption
       const prompt = `USER: Generate a social media caption for: "${baseCaption}". 
           Tone: ${tone}. 
-          Format: Catchy start, 2-3 relevant emojis, 3 hashtags at end.
+          Format: Catchy start, relevant appropriate emojis, hashtags at end.
           Strict rules: No explanations about caption, only 1 caption under 150 chars. And caption should not contain '�'
           ASSISTANT:  
           `;
