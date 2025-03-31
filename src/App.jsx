@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
+import { Analytics } from "@vercel/analytics/react";
 import './App.css';
 
 function App() {
@@ -263,6 +264,7 @@ function App() {
       <div className="button-group">
         <button onClick={generateCaption}>Generate Caption</button>
       </div>
+      <Analytics /> 
     </div>
   );
 }
