@@ -108,7 +108,7 @@ function App() {
    
     try {
       // Get image description from BLIP at backend
-      const response = await fetch('https://huggingface.co/spaces/Mandeep08/generate-caption', {
+      const response = await fetch('https://mandeep08-generate-caption.hf.space/generate-caption', {
         method: 'POST',
         body: formData,
       });
