@@ -1,3 +1,5 @@
+
+
 import React, { useState, useRef, useCallback } from 'react';
 import { Analytics } from "@vercel/analytics/react";
 import './App.css';
@@ -99,22 +101,26 @@ function App() {
     // const currentLanguage = language.trim() || 'English';
     setIsLoading(true);
     setCaptionResult('');
+
+
+    const formData = new FormData();
+    formData.append('image', uploadedFile);
    
     try {
-      // Get image description from BLIP
-      const blipData = await apiRequest(
-        'https://api-inference.huggingface.co/models/Salesforce/blip-image-captioning-base',
-        {
-          headers: { 
-            'Authorization': `Bearer ${import.meta.env.VITE_HUGGING_FACE_API_KEY}`,
-            'Content-Type': uploadedFile.type
-          },
-          method: 'POST',
-          body: uploadedFile
-        }
-      );
+      // Get image description from BLIP at backend
+      const response = await fetch('https://huggingface.co/spaces/Mandeep08/generate-caption', {
+        method: 'POST',
+        body: formData,
+      });
 
-      const baseCaption = blipData[0]?.generated_text || 'an interesting image';
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`);
+      }
+
+
+      const data = await response.json();
+      
+      let baseCaption=data.caption;
       console.log('BLIP Description:', baseCaption);
 
       // Generate formatted caption
@@ -272,4 +278,4 @@ function App() {
 export default App;
 
 
-
+    
