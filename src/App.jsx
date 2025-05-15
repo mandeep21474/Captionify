@@ -1,11 +1,13 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Analytics } from "@vercel/analytics/react";
+import { Client } from "@gradio/client";
 import './App.css';
 
 function App() {
   const [uploadedFile, setUploadedFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [captionResult, setCaptionResult] = useState('');
+  const [client, setClient] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [tone, setTone] = useState('fun');
   // const [language, setLanguage] = useState('');
@@ -13,8 +15,33 @@ function App() {
   const fileInputRef = useRef(null);
   const dropZoneRef = useRef(null);
   
+  const spaceId = "Mandeep08/test";
   const MAX_RETRIES = 3;
   const API_TIMEOUT = 30000; // 30 seconds
+
+
+    // Initialize the Gradio client on component mount
+  useEffect(() => {
+    async function initClient() {
+      try {
+        const gradioClient = await Client.connect(spaceId);
+        setClient(gradioClient);
+      } catch (err) {
+        console.error("Failed to connect to Gradio:", err);
+        setError("Could not connect to the Gradio app");
+      }
+    }
+    
+    initClient();
+    
+    // Clean up function
+    return () => {
+      // If there's any cleanup for the client
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [spaceId]);
 
   // Handle file selection
   const handleFile = useCallback((file) => {
@@ -95,26 +122,38 @@ function App() {
       alert('Please upload an image first');
       return;
     }
+
+    if (!client) {
+      setError("Client not initialized yet. Please wait or refresh.");
+      return;
+    }
+    
     
     // const currentLanguage = language.trim() || 'English';
     setIsLoading(true);
     setCaptionResult('');
    
     try {
-      // Get image description from BLIP
-      const blipData = await apiRequest(
-        'https://api-inference.huggingface.co/models/Salesforce/blip-image-captioning-base',
-        {
-          headers: { 
-            'Authorization': `Bearer ${import.meta.env.VITE_HUGGING_FACE_API_KEY}`,
-            'Content-Type': uploadedFile.type
-          },
-          method: 'POST',
-          body: uploadedFile
-        }
-      );
+      let blipdata='';
+      // Call the Gradio endpoint using the client with the correct format
+      const result = await client.predict("/predict", { 
+        img: uploadedFile,        
+        min_len: 15,
+        max_len: 100
+      });
+      
+      if (result && result.data) {
+  
+          console.log("Received non-string data:", result.data);
+           const rawCaption = result.data[0];
+          const cleanCaption = rawCaption.replace(/\d+(\.\d+)?\s*seconds?/, '').trim();
+          blipdata=String(cleanCaption);
+        
+      } else {
+        setError("Received empty response");
+      }
 
-      const baseCaption = blipData[0]?.generated_text || 'an interesting image';
+      const baseCaption =blipdata;
       console.log('BLIP Description:', baseCaption);
 
       // Generate formatted caption
