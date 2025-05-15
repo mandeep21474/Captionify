@@ -10,7 +10,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@gradio/client": "^1.14.2",
+    "@huggingface/inference": "^3.13.0",
+    "@mistralai/mistralai": "^1.6.0",
     "@vercel/analytics": "^1.5.0",
+    "lucide-react": "^0.510.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
