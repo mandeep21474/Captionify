@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Analytics } from "@vercel/analytics/react";
 import { Client } from "@gradio/client";
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import './App.css';
 
 function App() {
@@ -10,6 +11,8 @@ function App() {
   const [client, setClient] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [tone, setTone] = useState('fun');
+  // const [error, setError] = useState(null);
+  const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
   // const [language, setLanguage] = useState('');
   
   const fileInputRef = useRef(null);
@@ -157,56 +160,31 @@ function App() {
       console.log('BLIP Description:', baseCaption);
 
       // Generate formatted caption
-      const prompt = `USER: Generate a social media caption for: "${baseCaption}". 
-          Tone: ${tone}. 
-          Format: Catchy start, relevant appropriate emojis, hashtags at end.
-          Strict rules: No explanations about caption, only 1 caption under 150 chars. And caption should not contain '�'
-          ASSISTANT:  
-          `;
+    async function generateCaption(baseCaption, tone) {
+              try {
+                const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+                
+                const prompt = `Generate a social media caption for: "${baseCaption}". 
+                      Tone: ${tone}. 
+                      Format: Catchy start, relevant appropriate emojis, hashtags at end.
+                      Strict rules: No explanations about caption, only 1 caption under 150 characters. Return only the caption text, nothing else.`;
 
-      const mistralResponse = await apiRequest(
-        'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3',
-        {
-          headers: { 
-            'Authorization':`Bearer ${import.meta.env.VITE_HUGGING_FACE_API_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          method: 'POST',
-          body: JSON.stringify({
-            inputs: prompt,
-            parameters: {
-              max_new_tokens: 100,
-              temperature: 0.7,
-              repetition_penalty: 1.5,
-              top_p: 0.95,
-              top_k: 50,
-              do_sample: true,
-              bad_words_ids: [[27, 91, 437, 1659, 3359]], // Prevent special chars
-              return_full_text: false
-            }
-          })
-        }
-      );
+                const result = await model.generateContent(prompt);
+                const response = await result.response;
+                const caption = response.text().trim();
+                
+                return caption;
+                
+              } catch (error) {
+                console.error('Error generating caption:', error);
+                throw error;
+              }
+    }
+    const caption = await generateCaption(baseCaption, tone);
+    setCaptionResult(caption);
+    console.log(caption);
 
-      // Log raw API response
-      console.log('Raw Hugging Face API Response:', mistralResponse);
       
-      const rawCaption = mistralResponse[0]?.generated_text || '';
-      console.log('Raw Caption Before Processing:', rawCaption);
-      
-      const cleanCaption = rawCaption
-        .replace(/[^\p{L}\p{M}\p{N}\p{P}\p{S}\p{Z}\p{Emoji}]/gu, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-
-      console.log('Cleaned Caption:', cleanCaption);
-      
-      if (cleanCaption.includes("Caption Ideas")) {
-        const firstColonIndex = cleanCaption.indexOf(":");
-        setCaptionResult(cleanCaption.slice(firstColonIndex + 1));
-      } else {
-        setCaptionResult(cleanCaption);
-      }
 
     } catch (error) {
       alert(`Error: ${error.message}. Please try again.`);
