@@ -14,7 +14,7 @@
 
 ## 🛠️ Tech Stack  
 - **Frontend**: React.js, JavaScript, CSS  
-- **AI Models**: Salesforce BLIP, Mistral-7B  
+- **AI Models**: Salesforce BLIP, Gemini 2.5 Flash  
 - **API Integration**: Hugging Face Inference API  
 
 ---
