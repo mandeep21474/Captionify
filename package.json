@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@google/genai": "^1.15.0",
+    "@google/generative-ai": "^0.24.1",
     "@gradio/client": "^1.14.2",
     "@huggingface/inference": "^3.13.0",
     "@mistralai/mistralai": "^1.6.0",
@@ -27,6 +29,6 @@
     "eslint-plugin-react-hooks": "^5.1.0",
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^15.15.0",
-    "vite": "^6.2.3"
+    "vite": "^6.3.5"
   }
 }
