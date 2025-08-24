@@ -11,27 +11,31 @@ function App() {
   const [client, setClient] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [tone, setTone] = useState('fun');
-  // const [error, setError] = useState(null);
+  const [error, setError] = useState(null); 
+  const [clientReady, setClientReady] = useState(false); 
+  
   const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
-  // const [language, setLanguage] = useState('');
   
   const fileInputRef = useRef(null);
   const dropZoneRef = useRef(null);
   
   const spaceId = "Mandeep08/test";
   const MAX_RETRIES = 3;
-  const API_TIMEOUT = 30000; // 30 seconds
+  const API_TIMEOUT = 30000;
 
-
-    // Initialize the Gradio client on component mount
+  // Initialize the Gradio client on component mount
   useEffect(() => {
     async function initClient() {
       try {
+        setError(null); 
         const gradioClient = await Client.connect(spaceId);
         setClient(gradioClient);
+        setClientReady(true); // Mark client as ready
+        console.log("Gradio client initialized successfully");
       } catch (err) {
         console.error("Failed to connect to Gradio:", err);
-        setError("Could not connect to the Gradio app");
+        setError("Could not connect to the Gradio app. Please refresh and try again.");
+        setClientReady(false);
       }
     }
     
@@ -39,12 +43,11 @@ function App() {
     
     // Clean up function
     return () => {
-      // If there's any cleanup for the client
       if (imagePreview) {
         URL.revokeObjectURL(imagePreview);
       }
     };
-  }, [spaceId]);
+  }, []); 
 
   // Handle file selection
   const handleFile = useCallback((file) => {
@@ -102,7 +105,7 @@ function App() {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        if (response.status === 503 && retries > 0) { // Model loading
+        if (response.status === 503 && retries > 0) {
           await new Promise(resolve => setTimeout(resolve, 2000));
           return apiRequest(url, options, retries - 1);
         }
@@ -126,76 +129,77 @@ function App() {
       return;
     }
 
-    if (!client) {
-      setError("Client not initialized yet. Please wait or refresh.");
+    if (!client || !clientReady) {
+      setError("Please wait for the system to initialize, then try again.");
       return;
     }
     
-    
-    // const currentLanguage = language.trim() || 'English';
     setIsLoading(true);
     setCaptionResult('');
-   
+    setError(null); // Clear any previous errors
+    
     try {
-      let blipdata='';
-      // Call the Gradio endpoint using the client with the correct format
+      console.log("Starting caption generation...");
+      
+      // Call the Gradio endpoint
       const result = await client.predict("/predict", { 
         img: uploadedFile,        
         min_len: 15,
         max_len: 100
       });
       
-      if (result && result.data) {
-  
-          console.log("Received non-string data:", result.data);
-           const rawCaption = result.data[0];
-          const cleanCaption = rawCaption.replace(/\d+(\.\d+)?\s*seconds?/, '').trim();
-          blipdata=String(cleanCaption);
-        
-      } else {
-        setError("Received empty response");
+      console.log("Gradio result:", result);
+      
+      if (!result || !result.data || !result.data[0]) {
+        throw new Error("Invalid response from image processing service");
       }
 
-      const baseCaption =blipdata;
+      const rawCaption = result.data[0];
+      const cleanCaption = rawCaption.replace(/\d+(\.\d+)?\s*seconds?/, '').trim();
+      const baseCaption = String(cleanCaption);
+      
       console.log('BLIP Description:', baseCaption);
 
-      // Generate formatted caption
-    async function generateCaption(baseCaption, tone) {
-              try {
-                const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-                
-                const prompt = `Generate a social media caption for: "${baseCaption}". 
-                      Tone: ${tone}. 
-                      Format: Catchy start, relevant appropriate emojis, hashtags at end.
-                      Strict rules: No explanations about caption, only 1 caption under 150 characters. Return only the caption text, nothing else.`;
-
-                const result = await model.generateContent(prompt);
-                const response = await result.response;
-                const caption = response.text().trim();
-                
-                return caption;
-                
-              } catch (error) {
-                console.error('Error generating caption:', error);
-                throw error;
-              }
-    }
-    const caption = await generateCaption(baseCaption, tone);
-    setCaptionResult(caption);
-    console.log(caption);
-
+      // Generate formatted caption using Gemini
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
       
+      const prompt = `Generate a social media caption for: "${baseCaption}". 
+        Tone: ${tone}. 
+        Format: Catchy start, relevant appropriate emojis, hashtags at end.
+        Strict rules: No explanations about caption, only 1 caption under 150 characters. Return only the caption text, nothing else.`;
+
+      const geminiResult = await model.generateContent(prompt);
+      const response = await geminiResult.response;
+      const caption = response.text().trim();
+      
+      setCaptionResult(caption);
+      console.log("Final caption:", caption);
 
     } catch (error) {
-      alert(`Error: ${error.message}. Please try again.`);
+      console.error("Caption generation error:", error);
+      setError(`Error: ${error.message}. Please try again.`);
     } finally {
       setIsLoading(false);
     }
-  }, [uploadedFile, tone, apiRequest]);
+  }, [uploadedFile, tone, client, clientReady, genAI]);
 
   return (
     <div className="container">
       <h1>Captionify</h1>
+      
+      {/* Show initialization status */}
+      {!clientReady && !error && (
+        <div style={{ padding: '10px', background: '4a00e0', marginBottom: '20px' }}>
+          Initializing system, please wait...
+        </div>
+      )}
+      
+      {/* Show errors */}
+      {error && (
+        <div style={{ padding: '10px', background: '#ffebee', color: '#c62828', marginBottom: '20px' }}>
+          {error}
+        </div>
+      )}
       
       <div 
         className={`upload-section ${isLoading ? 'active' : ''}`}
@@ -232,7 +236,7 @@ function App() {
           id="tone"
           value={tone}
           onChange={(e) => setTone(e.target.value)}
-        > '
+        >
           <option value="fun">😄 Fun</option>
           <option value="formal">🎩 Formal</option>
           <option value="casual">👕 Casual</option>
@@ -253,22 +257,8 @@ function App() {
           <option value="aesthetic">✨ Aesthetic</option>
           <option value="nostalgic">📻 Nostalgic</option>
           <option value="techy">💻 Techy</option>
-
         </select>
       </div>
-
-      {/* Language Selection */}
-      {/* <div className="tone-selector">
-        <label htmlFor="lang">Caption Language:</label>
-        <input 
-          id="lang" 
-          type="text" 
-          placeholder="English (default)"
-          style={{ backgroundImage: 'none', paddingRight: '25px' }}
-          value={language}
-          onChange={(e) => setLanguage(e.target.value)}
-        />
-      </div> */}
 
       {isLoading && <div className="loading-spinner" />}
       
@@ -279,13 +269,17 @@ function App() {
       )}
       
       <div className="button-group">
-        <button onClick={generateCaption}>Generate Caption</button>
+        <button 
+          onClick={generateCaption}
+          disabled={isLoading || !clientReady}
+        >
+          {isLoading ? 'Generating...' : 'Generate Caption'}
+        </button>
       </div>
+      
       <Analytics /> 
     </div>
   );
 }
 
 export default App;
-
-
